@@ -1,5 +1,7 @@
 let TS = require("../../diagnostics/trace-sources").get("Web-Client");
 
+let Message = require("../../contracts/message");
+
 class WebClient {
 	constructor() {
 		TS.traceVerbose(__filename, "Initializing Web Client...");
@@ -11,18 +13,32 @@ class WebClient {
         this.client = require('requestify');
 	}
 
-    sendRequest(method, url, payload) {
+    sendRequest(webCall, payload) {
         let requestOptions = {
-            method: method,
+            method: webCall.Method,
             body: payload,
             dataType: "json"
         };
-        this.client.request(url, requestOptions)
-            .fail(function(response) {
+        let responseMessagePromise = this.client.request(webCall.URL, requestOptions)
+            .then(function(response) {
+                return Message.fromJson(response.getBody());
+            }, function(response) {
                 let code = response.getCode();
                 let body = response.getBody();
-                TS.traceError(__filename, `Error ${code}: ${body.message}`);
+                let msg = Message.fromJson(body);
+                let errMessage = msg.getArgument("Error");
+                if (!errMessage)
+                    errMessage = body.message;
+                TS.traceError(__filename, `Error ${code}. ${errMessage}`);
+                return msg;
             });
+        if (webCall.Callback) {
+            let callback = function(responseMsg) {
+                return this.sendRequest(webCall.Callback, responseMsg);
+            }
+            responseMessagePromise.then(callback);
+        }
+        return responseMessagePromise;
     }
 }
 module.exports = new WebClient();

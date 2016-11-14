@@ -88,12 +88,11 @@ class WebListener {
 		app.use(bodyParser.json());
 		
 		let route = express.Router();
-		let lambda = (req, res) => {
-			let msg = Message.fromJson(req.body.Message);
+		route.post("/", (req, res) => {
+			let msg = Message.fromJson(req.body);
 			let respMsg = this.commandService.dispatch(msg);
 			res.status(200).send({ Message: respMsg });
-		};
-		route.post("/", function(request, response, next) { response.status(200).send({ Message: { }}); });
+		});
 		app.use(route);
 
 		// Catch 404 and forward to error handler

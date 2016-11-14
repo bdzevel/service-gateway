@@ -2,6 +2,7 @@ let TS = require("../../diagnostics/trace-sources").get("Command-Service");
 
 let Message = require("../../contracts/message");
 
+// Dispatches commands to local services (within this node)
 class CommandService {
 	constructor() {
 		TS.traceVerbose(__filename, "Initializing service...");
