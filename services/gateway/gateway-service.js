@@ -21,6 +21,7 @@ class GatewayService {
 		this.commandService = require("../command/command-service");
 		this.configurationService = require("../configuration/configuration-service");
 		this.commandService.register(constants.Actions.Register, msg => this.registerHandler(msg));
+		this.commandService.register(constants.Actions.Deregister, msg => this.deregisterHandler(msg));
 		this.commandService.register(constants.Actions.Dispatch, msg => this.dispatchHandler(msg));
 		this.commandService.register(constants.Actions.Broadcast, msg => this.broadcastHandler(msg));
 	}
@@ -28,7 +29,7 @@ class GatewayService {
 	registerHandler(msg) {
 		// Subscribe microservice to specified event over HTTP
 		return Q.fcall((m) => {
-			return this.register(msg.Arguments.Symbol, msg.Arguments.RequestURL, msg.Arguments.CallbackURL);
+			return this.register(m.getArgument("Symbol"), m.getArgument("RequestURL"));
 		}, msg);
 	}
 	
@@ -41,6 +42,27 @@ class GatewayService {
 			this.subscriptions[symbol] = [ webCall ];
 		TS.traceVerbose(__filename, `Finished registering subscription for '${symbol}' at '${requestUrl}'`);
 		return new Message(constants.Responses.Register);
+	}
+
+	deregisterHandler(msg) {
+		return Q.fcall((m) => {
+			return this.deregister(m.getArgument("Symbol"), m.getArgument("RequestURL"));
+		}, msg);
+	}
+
+	deregister(symbol, requestUrl) {
+		TS.traceVerbose(__filename, `Deregistering subscription for '${symbol}' at '${requestUrl}'...`);
+		let subs = this.subscriptions[symbol];
+		if (subs) {
+			// Filter out any web calls going to this URL
+			subs = subs.filter(wc => wc.URL !== requestUrl);
+			if (subs.length === 0)
+				delete this.subscriptions[symbol];
+			else
+				this.subscriptions[symbol] = subs;
+		}
+		TS.traceVerbose(__filename, `Finished deregistering subscription for '${symbol}' at '${requestUrl}'...`);
+		return new Message(constants.Responses.Deregister);
 	}
 
 	dispatchHandler(msg) {

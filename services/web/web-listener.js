@@ -91,7 +91,7 @@ class WebListener {
 			let message = Message.fromJson(req.body);
 			let dispatchPromise = this.commandService.dispatch(message);
 			dispatchPromise.then(responseMsg => {
-				res.status(200).send({ responseMsg });
+				res.status(200).send(responseMsg);
 			});
 		});
 		app.use(route);
