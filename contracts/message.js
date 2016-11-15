@@ -1,8 +1,8 @@
 class Message {
-    constructor(symbol) {
-        this.Symbol = symbol;
-        this.Arguments = { };
-    }
+	constructor(symbol) {
+		this.Symbol = symbol;
+		this.Arguments = { };
+	}
 	
 	static fromJson(json) {
 		let msg = new Message(json.Symbol);
@@ -20,7 +20,7 @@ class Message {
 	}
 	
 	getArgument(name) {
-        return this.Arguments[name];
+		return this.Arguments[name];
 	}
 }
 module.exports = Message;
