@@ -71,7 +71,6 @@ class WebListener {
 		let server = https.createServer(httpsOptions, handlers);
 
 		TS.traceVerbose(__filename, "Finished initializing HTTPS server");
-		
 		return server;
 	}
 	
@@ -89,9 +88,11 @@ class WebListener {
 		
 		let route = express.Router();
 		route.post("/", (req, res) => {
-			let msg = Message.fromJson(req.body);
-			let respMsg = this.commandService.dispatch(msg);
-			res.status(200).send({ Message: respMsg });
+			let message = Message.fromJson(req.body);
+			let dispatchPromise = this.commandService.dispatch(message);
+			dispatchPromise.then(responseMsg => {
+				res.status(200).send({ responseMsg });
+			});
 		});
 		app.use(route);
 
@@ -108,7 +109,6 @@ class WebListener {
 		});
 
 		TS.traceVerbose(__filename, "Finished initializing HTTP request handlers");
-		
 		return app;
 	}
 	

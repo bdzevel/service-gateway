@@ -23,7 +23,7 @@ class CommandService {
         }
         this.commandHandlers[symbol] = function(msg) {
             validateMessage(msg);
-            callback(msg);
+            return callback(msg);
         };
     }
 
