@@ -34,9 +34,11 @@ class CommandService {
 			TS.traceWarning(__filename, `No handler registered for '${symbol}'`);
 			return;
 		}
-		let response = this.commandHandlers[symbol](command);
-		TS.traceVerbose(__filename, `Finished handling ${symbol}`);
-		return response;
+		return this.commandHandlers[symbol](command)
+			.then(function(response) { 
+				TS.traceVerbose(__filename, `Finished handling ${symbol}`);
+				return response;
+			});
 	}
 }
 

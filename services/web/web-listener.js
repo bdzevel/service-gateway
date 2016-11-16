@@ -38,7 +38,7 @@ class WebListener {
 			TS.traceError(__filename, "TLS_ENABLED option must be either '0' or '1'");
 			process.exit(2);
 		}
-		this.webServer.on("error", this.onError);
+		this.webServer.on("error", (err) => this.onError(err));
 	}
 	
 	setupHttp() {
@@ -89,10 +89,9 @@ class WebListener {
 		let route = express.Router();
 		route.post("/", (req, res) => {
 			let message = Message.fromJson(req.body);
-			let dispatchPromise = this.commandService.dispatch(message);
-			dispatchPromise.then(responseMsg => {
-				res.status(200).send(responseMsg);
-			});
+			this.commandService.dispatch(message)
+				.then(responseMsg => res.status(200).send(responseMsg))
+				.fail(err => res.status(500).send({ error: err.message }));
 		});
 		app.use(route);
 

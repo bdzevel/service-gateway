@@ -34,7 +34,7 @@ class GatewayService {
 	}
 	
 	register(symbol, requestUrl) {
-		let webCall = new WebCall(requestUrl);
+		let webCall = new WebCall(symbol, requestUrl);
 		TS.traceVerbose(__filename, `Registering subscription for '${symbol}' at '${requestUrl}' (${webCall.Method})...`);
 		if (this.subscriptions[symbol])
 			this.subscriptions[symbol].push(webCall);
@@ -78,13 +78,16 @@ class GatewayService {
 			return Q.fcall((s) => {
 				let m = new Message(constants.Responses.Dispatch);
 				m.addArgument("ErrorMessage", `No handler registered for '${s}'`);
+				return m;
 			}, symbol);
 		}
 
 		let webCall = subs[0];
-		let dispatchPromise = this.webClient.sendRequest(webCall, dispatchMsg);
-		TS.traceVerbose(__filename, `Finished dispatching '${symbol}'...`);
-		return dispatchPromise;
+		return this.sendRequest(webCall, dispatchMsg)
+			.then(response => {
+				TS.traceVerbose(__filename, `Finished dispatching '${symbol}'`);
+				return response;
+			});
 	}
 
 	broadcastHandler(msg) {
@@ -96,17 +99,35 @@ class GatewayService {
 	}
 
 	broadcast(msg) {
-		TS.traceVerbose(__filename, `Broadcasting '${msg.Symbol}' to all subscribers...`);
-		let subs = this.subscriptions[msg.Symbol];
+		let symbol = msg.Symbol;
+		TS.traceVerbose(__filename, `Broadcasting '${symbol}' to all subscribers...`);
+		let subs = this.subscriptions[symbol];
 		if (subs) {
 			for (let i in subs) {
 				let webCall = subs[i];
-				TS.traceVerbose(__filename, `Publishing '${msg.Symbol}' at '${webCall.URL}'...`);
-				this.webClient.sendRequest(webCall, msg);
+				TS.traceVerbose(__filename, `Publishing '${symbol}' at '${webCall.URL}'...`);
+				this.sendRequest(webCall, msg);
 			}
 		}
-		TS.traceVerbose(__filename, `Finished broadcasting '${msg.Symbol}'`);
+		TS.traceVerbose(__filename, `Finished broadcasting '${symbol}'`);
 		return new Message(constants.Responses.Broadcast);
 	}
+
+	sendRequest(webCall, message) {
+		return this.webClient.sendRequest(webCall, message)
+			.then(msg => { 
+				webCall.ErrorCount = 0;
+				return msg;
+			}).fail(err => {
+				webCall.ErrorCount++;
+				if (webCall.ErrorCount >= 3) {
+					setImmediate((wc) => {
+						this.deregister(wc.Symbol, wc.URL);
+					}, webCall);
+				}
+				throw err;
+			});
+	}
 }
+
 module.exports = new GatewayService();
